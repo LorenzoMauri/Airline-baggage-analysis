@@ -22,13 +22,13 @@ class Processing_dati:
         
     def estrazione_dati(self,interrogazione):
         self.int=interrogazione
-        connessione = mysql.connector.connect(user='root',password='admin',host='127.0.0.1',database='dati_datamanagement')
+        connessione = mysql.connector.connect(user='xxx',password='xxx',host='127.0.0.1',database='dati_datamanagement')
         interrogazione = connessione.cursor(buffered=True)
         interrogazione.execute(self.int) 
         return list(interrogazione)
     
     def connessione_mongo(self):
-        client=MongoClient('localhost', self.mongoPort, username='team', password='DataMan2019!')
+        client=MongoClient('localhost', self.mongoPort, username='xxx', password='xxx')
         return client 
         
     def importa_dati(self,nome_tabella):

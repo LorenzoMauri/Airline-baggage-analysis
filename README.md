@@ -1,5 +1,7 @@
 # Data Management and Visualization 
 
+### About 
+
 "I'm not paying for baggage insurance, quite sure it won't be lost".
 
 This is the classic phrase of those about to travel.
@@ -9,4 +11,11 @@ Analyzing large volumes of data, this project aims to point out the safest route
 Storytelling and dashboards at the following link :
 https://public.tableau.com/profile/antonio.pennacchia6765#!/vizhome/Iltuobagaglioalsicuroforseoriginal/Viz
 
-(special thanks to my teammate Antonio Pennacchia) 
+
+### Contributors
+Special thanks to my teammate 
+
+* Antonio Pennacchia 
+
+
+ 

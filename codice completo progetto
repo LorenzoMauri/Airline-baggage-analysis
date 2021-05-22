@@ -1,0 +1,213 @@
+CODICE PROGETTO 
+
+
+
+#COSTRUZIONE ARCHITETTURA DATI MONGODB PER SHARDING
+#L'architettura si compone di due ReplicaSet (rs_member e rs_member_1) contenenti i dati, ciascuno dei due composti da 3 daemon (mongod). Le porte utilizzate saranno quelle dalla 27011 alla 27016. 
+#Vi è inoltre un altro ReplicaSet, ovvero rs_member_csrs,che fa da CSRS (ConfigServerReplicaSet) e che contiene le informazioni relative alla spartizione dei dati. I 3 mongod che comporranno il CSRS saranno collocati nelle porte 26001,26002,26003.
+#Infine vi è un'istanza mongos che fa da tramite tra l'utente e i dati e gestisce le richieste (query). Questi si troverà nella porta 26000.
+#Per distribuire orizzontalmente il processo abilitiamo lo sharding, utilizzando come chiave di sharding "id_flight" della tabella "flight" con partizione range-based (ci serve la semplice partizione in intervalli, inutile la hash based in tal caso).
+
+#entro in VM da prompt, poi:
+
+
+#creazione chiave per accesso sicuro dati:
+openssl rand -base64 756 /home/studente/mongo_key/key_file
+chmod 400 /home/studente/mongo_key/key_file
+
+#creo file di log e di storage per i due replica set e per il CSRS
+mkdir storage
+mkdir log_mongo 
+cd storage
+mkdir csrs1
+mkdir csrs2
+mkdir csrs3
+mkdir node1
+mkdir node2
+mkdir node3
+mkdir node4
+mkdir node5
+mkdir node6
+cd -
+cd log_mongo
+mkdir csrs1
+mkdir csrs2
+mkdir csrs3
+mkdir mongos
+mkdir node1
+mkdir node2
+mkdir node3
+mkdir node4
+mkdir node5
+mkdir node6
+cd -
+
+
+
+#creo 6 istanze mongod che andranno a comporre i RS "rs_member" e "rs_member_1" con rispettivamente 3 nodi a testa, in corrispondenza delle porte 27011,27012,27013,27014,27015,27016
+
+sudo mongod --port 27011 --dbpath /home/studente/storage/node1  --logpath /home/studente/log_mongo/node1/mongod.log  --bind_ip "127.0.0.1" --replSet "rs_member"  --keyFile /home/studente/mongo_key/key_file   --shardsvr --fork
+sudo mongod --port 27012 --dbpath /home/studente/storage/node2  --logpath /home/studente/log_mongo/node2/mongod.log  --bind_ip "127.0.0.1" --replSet "rs_member"  --keyFile /home/studente/mongo_key/key_file   --shardsvr --fork 
+sudo mongod --port 27013 --dbpath /home/studente/storage/node3  --logpath /home/studente/log_mongo/node3/mongod.log  --bind_ip "127.0.0.1" --replSet "rs_member"  --keyFile /home/studente/mongo_key/key_file   --shardsvr --fork 
+sudo mongod --port 27014 --dbpath /home/studente/storage/node4  --logpath /home/studente/log_mongo/node4/mongod.log  --bind_ip "127.0.0.1" --replSet "rs_member_1"  --keyFile /home/studente/mongo_key/key_file   --shardsvr --fork 
+sudo mongod --port 27015 --dbpath /home/studente/storage/node5  --logpath /home/studente/log_mongo/node5/mongod.log  --bind_ip "127.0.0.1" --replSet "rs_member_1"  --keyFile /home/studente/mongo_key/key_file   --shardsvr --fork 
+sudo mongod --port 27016 --dbpath /home/studente/storage/node6  --logpath /home/studente/log_mongo/node6/mongod.log  --bind_ip "127.0.0.1" --replSet "rs_member_1"  --keyFile /home/studente/mongo_key/key_file   --shardsvr --fork 
+
+
+#entro nel mongod della porta 27011 per inizializzare rs_member e inserire chiave di accesso a mongod
+
+mongo --port 27011  
+use admin 
+db.createUser({user: "team",pwd:  “DataMan2019!",roles: [{role: "root", db: "admin"}] }) 
+rs.initiate()
+exit
+
+#import dataset che ci servono dentro primary di rs_member sotto forma di collezione json (flight,flight_bag,airport,ranking_aci)
+
+mongoimport --authenticationDatabase=admin  --authenticationMechanism=SCRAM-SHA-1 --username=team   --port 27011 --password=DataMan2019!  --db DM_database --collection=flight --file=/home/studente/progetto/flight.json  --jsonArray 
+mongoimport --authenticationDatabase=admin  --authenticationMechanism=SCRAM-SHA-1 --username=team   --port 27011 --password=DataMan2019!  --db DM_database --collection=flight_bag --file=/home/studente/progetto/flight_bag.json  --jsonArray 
+mongoimport --authenticationDatabase=admin  --authenticationMechanism=SCRAM-SHA-1 --username=team   --port 27011 --password=DataMan2019!  --db DM_database --collection=airport --file=/home/studente/progetto/airport.json  --jsonArray 
+mongoimport --authenticationDatabase=admin  --authenticationMechanism=SCRAM-SHA-1 --username=team   --port 27011 --password=DataMan2019!  --db DM_database --collection=ranking_aci --file=/home/studente/progetto/ranking_aci.json  --jsonArray
+
+
+#inserisco demoni di porte 27012 e 27013 nel replica set rs_member
+
+mongo --port 27011
+use admin 
+db.auth(“team”,”DataMan2019!”) 
+rs.add(“127.0.0.1:27012”)
+rs.add(“127.0.0.1:27013”)
+exit
+
+
+
+#ora faccio la stessa operazione per rs_member_1 dal daemon della porta 27014
+
+mongo --port 27014
+use admin 
+db.createUser({user: "team",pwd:  “DataMan2019!",roles: [{role: "root", db: "admin"}] }) 
+db.auth(“team”,”DataMan2019!”) 
+rs.initiate()
+rs.add(“127.0.0.1:27015”)
+rs.add(“127.0.0.1:27016”)
+exit
+
+
+#creo demoni di CSRS
+
+sudo mongod --configsvr --port 26001 --dbpath /home/studente/storage/csrs1  --logpath /home/studente/log_mongo/csrs1/mongod.log --bind_ip "127.0.0.1"  --replSet "rs_member_csrs"  --keyFile /home/studente/mongo_key/key_file  --fork  
+sudo mongod --configsvr --port 26002 --dbpath /home/studente/storage/csrs2  --logpath /home/studente/log_mongo/csrs2/mongod.log --bind_ip "127.0.0.1"  --replSet "rs_member_csrs"  --keyFile /home/studente/mongo_key/key_file  --fork  
+sudo mongod --configsvr --port 26003 --dbpath /home/studente/storage/csrs3  --logpath /home/studente/log_mongo/csrs3/mongod.log --bind_ip "127.0.0.1"  --replSet "rs_member_csrs"  --keyFile /home/studente/mongo_key/key_file  --fork  
+
+
+#inizializzo CSRS e vi aggiungo i corrispondenti mongod
+
+mongo --port 26001
+use admin 
+db.createUser({user: "team",pwd:  “DataMan2019!",roles: [{role: "root", db: "admin"}] }) 
+db.auth(“team”,”DataMan2019!”) 
+rs.initiate()
+rs.add(“127.0.0.1:26002”)
+rs.add(“127.0.0.1:26003”)
+exit
+
+
+#creo mongos collegandolo alle porte dei mongod del CSRS
+
+sudo mongos  --configdb  rs_member_csrs/127.0.0.1:26001,127.0.0.1:26002,127.0.0.1:26003 --port 26000  --bind_ip  "127.0.0.1" --logpath /home/studente/log_mongo/mongos/mongod.log   --keyFile /home/studente/mongo_key/key_file  --fork     
+
+
+#inizializzo mongos e vi aggiungo gli shard corrispondenti ai due replica set che fanno da shard
+
+mongo –port 26000 
+db.auth(“team”,”DataMan2019!”) 
+sh.addShard(“rs_member/127.0.0.1:27011,127.0.0.1:27012,127.0.0.1:27013”)
+sh.addShard(“rs_member_1/127.0.0.1:27014,127.0.0.1:27015,127.0.0.1:27016”)
+
+
+#abilito sharding su chiave di flight
+
+
+
+sh.enableSharding("dati_datamanagement")
+db.flight.createIndex({"id_flight":1})
+sh.shardCollection("dati_datamanagement.flight",{id_flight :1})
+
+
+
+
+QUERY
+
+#QUERY ROTTE AEREE DA/A MILANO-BERGAMO A/DA TOP AEREOPORTI EUROPEE (RANKING ACI)
+
+#dataset utilizzati: flight, flight_bag2, airport, ranking_aci
+
+db.airport.aggregate([{$project:{_id:"$id_airport",iataCode:1,name:1,city:1,latitude:1,longitude:1}},{$out:"airport"}]) #rimuoviamo da airport variabili inutili, teniamo solo quelle che ci servono
+
+db.ranking_aci.aggregate([{$match:{Code:{$ne:"MXP"}}},{$project:{_id:"$Rank",Code:1,annual_psg_2018:"$Passengers"}},{$out:"ranking_no_mxp"}])  #togliamo malpensa dal ranking_aci, malpensa sarà già tra gli aereoporti milanesi considerati 
+#(non ci interessano ad esempio voli Milano-Bergamo)
+
+db.flight_bag2.aggregate([{$match:{lost:{$lt:2}}},{$group:{_id:"$id_flight",sum_bagages:{$sum:1},sum_losts:{$sum:"$lost"}}},{$project:{id_flight:1,sum_bagages:1,sum_losts:1}},{$out:"sum_lost_for_flight"}],{allowDiskUse: true })
+#prendiamo per ogni volo iil numero di bagagli persi e il numero di bagagli considerati, lost sarà minore di due perchè consideriamo solo valori 0 (non perso) e 1 (perso), escludendo i missing che sono identificati da 999
+
+db.flight.aggregate([{$match:{$or:[{departure:{$in:["MXP","LIN","BGY"]}},{arrival:{$in:["MXP","LIN","BGY"]}}]}},{$project:{id_flight:1,departure:1,arrival:1}},{$out:"flight2"}]) #sfruttiamo lo sharding su id_flight per alleggerire il dataset flight, 
+considerando solo voli che partono o arrivano dagli aereoporti milanesi (ne considereremo poi un sottoinsieme, cioè quelli la cui "altra meta" è nella classifica ACI
+
+db.ranking_no_mxp.aggregate([{$lookup:{from:"flight2",localField:"Code",foreignField:"arrival",as:"flight_char"}},{$unwind:"$flight_char"},{$project:{_id:"$flight_char.id_flight",departure:"$flight_char.departure",arrival:"$flight_char.arrival",annual_psg_2018_arr:"$annual_psg_2018"}},{$match:{departure:{$in:["MXP","LIN","BGY"]}}},{$out:"milan_dep_flights"}])   
+#uniamo le tabelle del ranking e dei voli, considerando appunto solo voli che ci interessano e aggiungendo l'informazione sui passeggeri annuali del 2018 dell'aereoporto di arrivo (quello "non milanese")
+
+db.ranking_no_mxp.aggregate([{$lookup:{from:"flight2",localField:"Code",foreignField:"departure",as:"flight_char"}},{$unwind:"$flight_char"},{$project:{_id:"$flight_char.id_flight",departure:"$flight_char.departure",arrival:"$flight_char.arrival",annual_psg_2018_dep:"$annual_psg_2018"}},{$match:{arrival:{$in:["MXP","LIN","BGY"]}}},{$out:"milan_arr_flights"}])                                                      
+#stessa cosa per i voli che arrivano a Milano dalle top mete europee
+
+
+db.milan_dep_flights.aggregate([{$lookup:{from:"sum_lost_for_flight",localField:"_id",foreignField:"_id",as:"lost"}},{$unwind:"$lost"},{$project:{_id:1,departure:1,arrival:1,"annual_psg_2018_arr":1,"sum_bagages":"$lost.sum_bagages","sum_losts":"$lost.sum_losts"}},{$out:"milan_dep_flights_losts"}])
+#per ogni volo che parte dai voli milanesi, calcoliamo la somma dei bagagli in analisi e la somma di quanti di questi bagagli sono stati persi
+
+db.milan_arr_flights.aggregate([{$lookup:{from:"sum_lost_for_flight",localField:"_id",foreignField:"_id",as:"lost"}},{$unwind:"$lost"},{$project:{_id:1,departure:1,arrival:1,"annual_psg_2018_dep":1,"sum_bagages":"$lost.sum_bagages","sum_losts":"$lost.sum_losts"}},{$out:"milan_arr_flights_losts"}])
+#stessa cosa per direzione opposta (verso Milano)
+
+db.milan_dep_flights_losts.aggregate([{$group:{_id:{departure:"$departure",arrival:"$arrival",annual_psg_2018_arr:"$annual_psg_2018_arr"},sum_bagages:{$sum:"$sum_bagages"},sum_losts:{$sum:"$sum_losts"}}},{$project:{_id:0,departure:"$_id.departure",arrival:"$_id.arrival",annual_psg_2018_arr:"$_id.annual_psg_2018_arr","sum_bagages":1,"sum_losts":1}},{$out:"milan_deps"}])
+#per ogni rotta che parte dai voli milanesi, calcoliamo la somma dei bagagli in analisi e la somma di quanti di questi bagagli sono stati persi (questa volta la somma è su tutti i voli di un intero percorso, Es. Linate-Stansted)
+
+db.milan_arr_flights_losts.aggregate([{$group:{_id:{departure:"$departure",arrival:"$arrival",annual_psg_2018_dep:"$annual_psg_2018_dep"},sum_bagages:{$sum:"$sum_bagages"},sum_losts:{$sum:"$sum_losts"}}},{$project:{_id:0,departure:"$_id.departure",arrival:"$_id.arrival",annual_psg_2018_dep:"$_id.annual_psg_2018_dep","sum_bagages":1,"sum_losts":1}},{$out:"milan_arrs"}])
+#stessa cosa per direzione opposta
+
+db.milan_deps.aggregate([{$lookup:{from:"airport",localField:"departure",foreignField:"iataCode",as:"departure"}},{$lookup:{from:"airport",localField:"arrival",foreignField:"iataCode",as:"arrival"}},{$out:"milan_deps_complete"}])
+db.milan_arrs.aggregate([{$lookup:{from:"airport",localField:"departure",foreignField:"iataCode",as:"departure"}},{$lookup:{from:"airport",localField:"arrival",foreignField:"iataCode",as:"arrival"}},{$out:"milan_arrs_complete"}])
+#per entrambe le tabelle ottenute prima, tramite embedding annidiamo ai campi partenza e arrivo le informazioni sull'aereoporto di riferimento (città, nome, latitudine, longitudine...)
+
+#Dunque le due tabelle milan_deps_complete e milan_arrs_complete verranno sommate (ogni rotta verrà considerata indipendentemente da quale delle due sia l'andata e quale il ritorno) e potranno essere inserite nella mappa presente nella dashboard grazie
+#all'informazione annessa riguardo le coordinate dell'aereoporto (la somma è computazionalmente e sintatticamente molto più agevole se svolta alla fine, per questo abbiamo prodotto due tabelle)
+
+
+#QUERY COLORE E TIPO DI BAGAGLIO
+
+db.flight_bag2.aggregate([{$match:{lost:{$lt:2}}},{$group:{_id:"$bagColor",sum_bagages:{$sum:1},sum_losts:{$sum:"$lost"}}},{$project:{bagColor:1,sum_bagages:1,sum_losts:1}},{$out:"lost_bag_color"}])
+#aggregazione somma di bagagli e somma di bagagli persi per colore del bagaglio
+
+db.flight_bag2.aggregate([{$match:{lost:{$lt:2}}},{$group:{_id:"$bagType",sum_bagages:{$sum:1},sum_losts:{$sum:"$lost"}}},{$project:{bagType:1,sum_bagages:1,sum_losts:1}},{$out:"lost_bag_type"}])
+#aggregazione somma di bagagli e somma di bagagli persi per tipo di bagaglio
+
+
+
+(INSERIRE PARTE DI MERGE PER FORMATTAZIONE)
+
+- inserire codice .py import ed export  
+unire le informazioni tra departure e arrival tenendo conto che MXP-AMS è uguale a AMS-MXP 
+nb. milan_passengers_dep e milan_passengers_arrs devono essere considerati solo una volta 
+
+- mapping dei colori e del tipo 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

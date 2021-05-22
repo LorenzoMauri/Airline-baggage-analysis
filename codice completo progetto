@@ -64,10 +64,10 @@ exit
 
 #import dataset che ci servono dentro primary di rs_member sotto forma di collezione json (flight,flight_bag,airport,ranking_aci)
 
-mongoimport --authenticationDatabase=admin  --authenticationMechanism=SCRAM-SHA-1 --username=team   --port 27011 --password=DataMan2019!  --db DM_database --collection=flight --file=/home/studente/progetto/flight.json  --jsonArray 
-mongoimport --authenticationDatabase=admin  --authenticationMechanism=SCRAM-SHA-1 --username=team   --port 27011 --password=DataMan2019!  --db DM_database --collection=flight_bag --file=/home/studente/progetto/flight_bag.json  --jsonArray 
-mongoimport --authenticationDatabase=admin  --authenticationMechanism=SCRAM-SHA-1 --username=team   --port 27011 --password=DataMan2019!  --db DM_database --collection=airport --file=/home/studente/progetto/airport.json  --jsonArray 
-mongoimport --authenticationDatabase=admin  --authenticationMechanism=SCRAM-SHA-1 --username=team   --port 27011 --password=DataMan2019!  --db DM_database --collection=ranking_aci --file=/home/studente/progetto/ranking_aci.json  --jsonArray
+mongoimport --authenticationDatabase=admin  --authenticationMechanism=SCRAM-SHA-1 --username=team   --port 27011 --password=  --db DM_database --collection=flight --file=/home/studente/progetto/flight.json  --jsonArray 
+mongoimport --authenticationDatabase=admin  --authenticationMechanism=SCRAM-SHA-1 --username=team   --port 27011 --password=  --db DM_database --collection=flight_bag --file=/home/studente/progetto/flight_bag.json  --jsonArray 
+mongoimport --authenticationDatabase=admin  --authenticationMechanism=SCRAM-SHA-1 --username=team   --port 27011 --password=  --db DM_database --collection=airport --file=/home/studente/progetto/airport.json  --jsonArray 
+mongoimport --authenticationDatabase=admin  --authenticationMechanism=SCRAM-SHA-1 --username=team   --port 27011 --password=  --db DM_database --collection=ranking_aci --file=/home/studente/progetto/ranking_aci.json  --jsonArray
 
 
 #inserisco demoni di porte 27012 e 27013 nel replica set rs_member

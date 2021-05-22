@@ -58,7 +58,7 @@ sudo mongod --port 27016 --dbpath /home/studente/storage/node6  --logpath /home/
 
 mongo --port 27011  
 use admin 
-db.createUser({user: "team",pwd:  “DataMan2019!",roles: [{role: "root", db: "admin"}] }) 
+db.createUser({user: "team",pwd:  ""   ,roles: [{role: "root", db: "admin"}] }) 
 rs.initiate()
 exit
 
@@ -74,7 +74,7 @@ mongoimport --authenticationDatabase=admin  --authenticationMechanism=SCRAM-SHA-
 
 mongo --port 27011
 use admin 
-db.auth(“team”,”DataMan2019!”) 
+db.auth(“team”,” ”) 
 rs.add(“127.0.0.1:27012”)
 rs.add(“127.0.0.1:27013”)
 exit
@@ -85,8 +85,8 @@ exit
 
 mongo --port 27014
 use admin 
-db.createUser({user: "team",pwd:  “DataMan2019!",roles: [{role: "root", db: "admin"}] }) 
-db.auth(“team”,”DataMan2019!”) 
+db.createUser({user: "team",pwd:  "" ,roles: [{role: "root", db: "admin"}] }) 
+db.auth(“team”,” ”) 
 rs.initiate()
 rs.add(“127.0.0.1:27015”)
 rs.add(“127.0.0.1:27016”)
@@ -104,8 +104,8 @@ sudo mongod --configsvr --port 26003 --dbpath /home/studente/storage/csrs3  --lo
 
 mongo --port 26001
 use admin 
-db.createUser({user: "team",pwd:  “DataMan2019!",roles: [{role: "root", db: "admin"}] }) 
-db.auth(“team”,”DataMan2019!”) 
+db.createUser({user: "team",pwd:  "",roles: [{role: "root", db: "admin"}] }) 
+db.auth(“team”,””) 
 rs.initiate()
 rs.add(“127.0.0.1:26002”)
 rs.add(“127.0.0.1:26003”)
@@ -120,7 +120,7 @@ sudo mongos  --configdb  rs_member_csrs/127.0.0.1:26001,127.0.0.1:26002,127.0.0.
 #inizializzo mongos e vi aggiungo gli shard corrispondenti ai due replica set che fanno da shard
 
 mongo –port 26000 
-db.auth(“team”,”DataMan2019!”) 
+db.auth(“team”,””) 
 sh.addShard(“rs_member/127.0.0.1:27011,127.0.0.1:27012,127.0.0.1:27013”)
 sh.addShard(“rs_member_1/127.0.0.1:27014,127.0.0.1:27015,127.0.0.1:27016”)
 
@@ -190,13 +190,6 @@ db.flight_bag2.aggregate([{$match:{lost:{$lt:2}}},{$group:{_id:"$bagType",sum_ba
 
 
 
-(INSERIRE PARTE DI MERGE PER FORMATTAZIONE)
-
-- inserire codice .py import ed export  
-unire le informazioni tra departure e arrival tenendo conto che MXP-AMS è uguale a AMS-MXP 
-nb. milan_passengers_dep e milan_passengers_arrs devono essere considerati solo una volta 
-
-- mapping dei colori e del tipo 
 
 
 

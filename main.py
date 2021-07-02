@@ -7,29 +7,14 @@ Created on Sat Mar  7 10:01:15 2020
 @author: loren
 """
 
-try : 
-    from pymongo import MongoClient
-    import mysql.connector
-    import datetime
-    import decimal
-    import json 
-except : 
-    print('Please check that all these packages have been installed : [pymongo, mysql.connector, datetime, decimal,json]')
-            
+import mysql.connector
+import datetime
+import decimal
+import json 
+   
 class Processing_dati:
     def __init__(self,mongoPort):
         self.mongoPort=mongoPort
-        
-    def estrazione_dati(self,interrogazione):
-        self.int=interrogazione
-        connessione = mysql.connector.connect(user='xxx',password='xxx',host='127.0.0.1',database='dati_datamanagement')
-        interrogazione = connessione.cursor(buffered=True)
-        interrogazione.execute(self.int) 
-        return list(interrogazione)
-    
-    def connessione_mongo(self):
-        client=MongoClient('localhost', self.mongoPort, username='xxx', password='xxx')
-        return client 
         
     def importa_dati(self,nome_tabella):
         self.nome_tabella=nome_tabella

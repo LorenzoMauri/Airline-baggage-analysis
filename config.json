@@ -1,0 +1,24 @@
+{
+
+    "Mongodb" : { 
+                "connection" : {
+                            "user" :  "",
+                            "password" :  "",
+                            "port" :  "",
+                            "host" :  "localhost"
+                                }
+
+    },
+
+    "MySQL" : { 
+        "connection" : {
+                    "user" :  "",
+                    "password" :  "",
+                    "port" :  "",
+                    "host" :  "localhost"
+                        }
+
+}
+}
+
+
